@@ -1,56 +1,35 @@
-import numpy as np
-from midiutil import MIDIFile
 import get_spectrum as spect
-from translation_ir_to_music import wavenumber_to_midi, molecular_weight_to_sound_code
+import numpy as np
+import musicpy as mp
+from io import StringIO
 
+def wavenumber_to_frequency(wavenumber : float) -> float:
+    frequency = 312.5*(wavenumber*0.001)**2
+    return frequency
 
-def find_peaks(wavenumbers, intensities, threshold=80, max_peaks=20):
-    """Find absorption dips in a transmittance spectrum (local minima below threshold).
+def molecular_weight_to_sound_code(compound_cas : str) -> int :
+    compound = nist.get_compound(compound_cas)
+    molecular_weight_compound = compound.mol_weight
+    if molecular_weight_compound < 50 :
+        return 41 #return violin sound
+    elif molecular_weight_compound >= 50 and molecular_weight_compound < 100 :
+        return 72 #return clarinet sound
+    elif molecular_weight_compound >= 100 and molecular_weight_compound < 200 :
+        return 43 #return cello sound
+    elif molecular_weight_compound >= 200 and molecular_weight_compound < 300 :
+        return 67 #return tenor sax sound
+    else :
+        return 44 #return contrabass
 
-    In transmittance, absorption bands appear as dips (low T = strong absorption).
-    threshold is in % transmittance — only dips below it are considered peaks.
-    Returns (wavenumber, absorption_strength) where absorption_strength is in [0, 1].
-    """
-    peaks = []
-    for i in range(1, len(intensities) - 1):
-        if intensities[i] < threshold and intensities[i] < intensities[i-1] and intensities[i] < intensities[i+1]:
-            absorption_strength = (100 - intensities[i]) / 100  # deeper dip = stronger
-            peaks.append((wavenumbers[i], absorption_strength))
-
-    # keep only the strongest absorptions
-    peaks.sort(key=lambda p: p[1], reverse=True)
-    peaks = peaks[:max_peaks]
-    # play from high wavenumber to low (same order as reading an IR spectrum)
-    peaks.sort(key=lambda p: p[0], reverse=True)
+def peak_detection (frequencies, transmittances, threshold=0.95) :
+    
+    peaks =[]
+    for i in range(1, len(transmittances) - 1):
+        if transmittances[i] > threshold:
+            peaks.append((frequencies[i], transmittances[i]))
     return peaks
+    
 
+def molecular_music (cas, bpm=120, threshold=0.95):
 
-def spectrum_to_midi(cas: str, output_file: str = "output.mid", bpm: int = 120):
-    """Convert the IR spectrum of a compound (by CAS) into a MIDI file.
-
-    Each peak in the spectrum becomes one note:
-      - wavenumber  -> pitch (higher wavenumber = higher note)
-      - intensity   -> velocity (stronger peak = louder)
-      - instrument  -> chosen by molecular weight
-    """
-    wavenumbers, intensities = spect.get_wavenumbers_and_intensities(cas)
-    peaks = find_peaks(wavenumbers, intensities)
-
-    instrument = molecular_weight_to_sound_code(cas) - 1  # midiutil is 0-indexed
-
-    midi = MIDIFile(1)
-    midi.addTempo(0, 0, bpm)
-    midi.addProgramChange(0, 0, 0, instrument)
-
-    beat = 0.0
-    for wn, intensity in peaks:
-        pitch = wavenumber_to_midi(wn)
-        velocity = int(40 + intensity * 70)  # map 0-1 to velocity 40-110
-        duration = 0.25 + intensity * 0.5   # stronger peaks held longer
-        midi.addNote(0, 0, pitch, beat, duration, velocity)
-        beat += duration
-
-    with open(output_file, "wb") as f:
-        midi.writeFile(f)
-
-    return output_file
+print("4")
