@@ -2,6 +2,7 @@ import nistchempy as nist
 from jcamp import jcamp_readfile
 import tempfile
 import os
+from ir_spectra_conversion import normalize_to_transmittance
 import matplotlib.pyplot as plt
 import pandas as pd
 from io import StringIO
