@@ -40,11 +40,16 @@ def peak_detection (wavenumbers, transmittances) -> list :
     """
     Removes the tiny noise so the final music is a little more pleasing
     
+<<<<<<< HEAD
     Args: 
         wavenumbers (list): list of wavenumbers values
         transmitances (list): list of transmittance values
     Return:
         (list): list of tuple corresponding to spectrum without noise
+=======
+    args (list), (list): two lists of wavenumbers and transmittances
+    return (list): list of tuples corresponding to spectrum without noise
+>>>>>>> 5ddc3f627d3f133d951dbd4563492bf329428600
     
     """
     
@@ -66,8 +71,9 @@ def molecular_music (extracted_data, compound, bpm_mol=120):
     Translates IR spectrum to music.
 
     The audio-spectrum frequency varies with a signal: if low transmittance:high frequency
-    Saves to a MIDI file, that can be incorporated in Streamlit app (or played with VLC media player).
+    Saves to a MIDI file, that can be incorporated in Streamlit app (or played with media player).
 
+<<<<<<< HEAD
     Args:
         extracted_data (list): list of tuple (data for wavenumbers and for transmittances)
         compound (nist.compound.NistCompound): compound object from NIST database
@@ -75,11 +81,20 @@ def molecular_music (extracted_data, compound, bpm_mol=120):
     
     Return:
         (str): Filename of music generated, to be included in Streamlit
+=======
+    Args (tuple), (NistCompound object), (int) : tuple of lists (data for wavenumbers and for transmittances), 
+    compound object from NIST database, default bpm of music is 120 bpm
+    Return (str) : Filename of music generated, to be included in Streamlit
+>>>>>>> 5ddc3f627d3f133d951dbd4563492bf329428600
     """
 
     print(type(compound))
     wavenumbers = extracted_data[0]
     transmittances = extracted_data[1]
+    if wavenumbers[0] < wavenumbers[-1]:
+        wavenumbers = wavenumbers[::-1]
+        transmittances = transmittances[::-1]
+
     peaks = peak_detection(wavenumbers, transmittances)
     print (len(peaks))
     compound_name = compound.name
@@ -158,7 +173,7 @@ def molecular_music (extracted_data, compound, bpm_mol=120):
     return filename #returns the name of the file which can then be used in streamlit hopefully
 
 # mini test
-if __name__ == "__main__":
+#if __name__ == "__main__":
     result = molecular_music(extract_spectrum_data(nist.get_compound('57-50-1')), nist.get_compound('57-50-1'))
     print(f"File created : {result}")
     print (f"The sound chosen is: {molecular_weight_to_sound_code('57-50-1')}")
