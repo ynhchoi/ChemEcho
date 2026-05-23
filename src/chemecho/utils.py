@@ -1,11 +1,11 @@
 import re
 import time
-import nistchempy as nist
 import requests
+import py3Dmol
 from rdkit import Chem
 from rdkit.Chem import Draw, AllChem
-import py3Dmol
-from IPython.display import HTML
+import nistchempy as nist
+
 
 _CAS_RE = re.compile(r'^\d{2,7}-\d{2}-\d$')
 _FORMULA_RE = re.compile(r'^([A-Z][a-z]?\d*)+$')
@@ -132,7 +132,6 @@ def molecule_3d_html(smiles: str) -> str | None:
     view = py3Dmol.view(width="100%", height=380)
     view.addModel(molblock, "mol")
     view.setStyle({"stick": {"colorscheme": "Jmol"}, "sphere": {"scale": 0.25, "colorscheme": "Jmol"}})
-    view.setBackgroundColor("#0e1117")
+    view.setBackgroundColor("white")
     view.zoomTo()
-    view.spin(True)
-    return HTML(view._make_html())
+    return view._make_html()
