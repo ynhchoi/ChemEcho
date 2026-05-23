@@ -1,29 +1,25 @@
-[build-system] 
+[build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
 name = "chemecho"
-version = "1.0"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {file = "MIT"}
-description = "ChemEcho is a tool to translate IR spectrum into music, making accessible the data for blind or visually impaired person. 
-This package is also intended for curious people who wants to discover a new fun and cool approach to compare molecules. "
+license = {text = "MIT"}
+description = "ChemEcho — translate IR spectra into music to make spectroscopy accessible to blind and visually impaired users, and to offer everyone a fun new way to compare molecules."
 dependencies = [
     "rdkit",
     "matplotlib",
-    "nistchempy == 1.0.5"
+    "nistchempy==1.0.5",
     "pandas",
     "streamlit",
-    "musicpy", 
+    "musicpy",
     "jcamp",
-    "io",
-    "os", 
     "requests",
-    "base64",
-    "numpy == 1.25",
-    "py3Dmol"
+    "numpy>=1.25,<2.0",
+    "scipy",
+    "py3Dmol",
 ]
 authors = [
     {name = "Eulalie Schwendenmann", email = "eulalie.schwendenmann@epfl.ch"},
@@ -37,16 +33,15 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 dynamic = ["version"]
 
 [project.urls]
-source = "https://github.com/yhchoi/chemecho"
-tracker = "https://github.com/yhchoi/chemecho/issues"
+source = "https://github.com/ynhchoi/chemecho_epfl"
+tracker = "https://github.com/ynhchoi/chemecho_epfl/issues"
 
 [project.optional-dependencies]
 test = [
@@ -67,16 +62,10 @@ doc = [
 path = "src/chemecho/__init__.py"
 
 [tool.pytest.ini_options]
-testpaths = [
-    "tests",
-]
+testpaths = ["tests"]
 
 [tool.coverage.run]
-omit = [
-    '__init__.py'
-]
+omit = ['__init__.py']
 
 [tool.coverage.report]
-exclude_also = [
-    "if __name__ == .__main__.:",
-]
+exclude_also = ["if __name__ == .__main__.:"]

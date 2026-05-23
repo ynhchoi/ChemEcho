@@ -55,16 +55,16 @@ from musification import molecular_weight_to_sound_code, peak_detection
 
 FG_CATALOG = {
     'O-H (alcohol)':    {'smarts': '[OX2H]',           'region': (3100, 3650), 'instrument': 73, 'pitch': ('C', 6)},
-    'O-H (carboxylic)': {'smarts': '[CX3](=O)[OX2H1]', 'region': (2500, 3300), 'instrument': 71, 'pitch': ('A', 5)},
-    'N-H':              {'smarts': '[NX3;H1,H2]',      'region': (3250, 3500), 'instrument': 68, 'pitch': ('G', 5)},
+    'O-H (carboxylic)': {'smarts': '[CX3](=O)[OX2H1]', 'region': (2500, 3300), 'instrument': 72, 'pitch': ('A', 5)},
+    'N-H':              {'smarts': '[NX3;H1,H2]',      'region': (3250, 3500), 'instrument': 69, 'pitch': ('G', 5)},
     'C-H (sp3)':        {'smarts': '[CX4;H1,H2,H3]',   'region': (2840, 2985), 'instrument': 25, 'pitch': ('F', 5)},
     'C-H (aromatic)':   {'smarts': '[cH]',             'region': (3000, 3120), 'instrument': 26, 'pitch': ('E', 5)},
     'C#N (nitrile)':    {'smarts': 'C#N',              'region': (2200, 2260), 'instrument': 11, 'pitch': ('D', 5)},
     'C#C (alkyne)':     {'smarts': 'C#C',              'region': (2100, 2260), 'instrument': 12, 'pitch': ('D', 5)},
     'C=O (carbonyl)':   {'smarts': '[CX3]=[OX1]',      'region': (1640, 1820), 'instrument': 56, 'pitch': ('C', 5)},
-    'C=C (alkene)':     {'smarts': '[CX3]=[CX3;!c]',   'region': (1600, 1680), 'instrument': 40, 'pitch': ('B', 4)},
+    'C=C (alkene)':     {'smarts': '[CX3]=[CX3;!c]',   'region': (1600, 1680), 'instrument': 41, 'pitch': ('B', 4)},
     'aromatic ring':    {'smarts': '[a]',              'region': (1450, 1610), 'instrument': 74, 'pitch': ('A', 4)},
-    'C-O':              {'smarts': '[CX4][OX2]',       'region': (1000, 1300), 'instrument': 60, 'pitch': ('G', 4)},
+    'C-O':              {'smarts': '[CX4][OX2]',       'region': (1000, 1300), 'instrument': 61, 'pitch': ('G', 4)},
     'N=O (nitro)':      {'smarts': '[NX3](=O)=O',      'region': (1300, 1600), 'instrument': 57, 'pitch': ('F', 4)},
 }
 
@@ -240,7 +240,7 @@ def molecular_music_fg(extracted_data, compound, smiles: str):
         )
     peaks = peak_detection(wavenumbers, transmittances)
     compound_name = compound.name
-    instru_main = 89  # Fantasia
+    instru_main = molecular_weight_to_sound_code(compound)
     bpm_mol = molecular_weight_to_bpm(compound)
     n_slots = len(peaks)
 
@@ -308,7 +308,7 @@ def molecular_music_fg(extracted_data, compound, smiles: str):
         next_channel = 1
     
 
-    accent_duration = interval_value * 8  
+    accent_duration = interval_value * 9  
     for fg, hits in confirmed.items():
         info = FG_CATALOG[fg]
         pname, poct = info['pitch']
