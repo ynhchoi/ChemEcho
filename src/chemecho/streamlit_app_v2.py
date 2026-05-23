@@ -26,7 +26,7 @@ if name_or_cas == "CAS (recommended)":
     cas = st.text_input("**Molecule CAS**", "58-08-2")
 
 else :
-    name = st.text_input("**Molecule name**", "acetone")
+    name = st.text_input("**Molecule name**", "caffeine")
     cas = name_to_cas(name)
 
             
