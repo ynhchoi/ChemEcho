@@ -45,7 +45,7 @@ conda activate chemecho
 Then install the package from the GitHub repository:
 
 ```
-(chemecho) $ pip install git+https://github.com/ynhchoi/chemecho_epfl.git
+(chemecho) $ pip install git+https://github.com/ynhchoi/ChemEcho.git
 ```
 
 **Verify that the installation worked:**
@@ -99,8 +99,8 @@ For working on the ChemEcho codebase itself.
 If you want to contribute back to this repository:
 
 ```
-git clone https://github.com/ynhchoi/chemecho_epfl.git
-cd chemecho_epfl
+git clone https://github.com/ynhchoi/ChemEcho.git
+cd ChemEcho
 ```
 
 If you want to fork the project under your own GitHub account, create an
@@ -139,9 +139,9 @@ above).
 ## 🧯 Troubleshooting
 
 ### `pip install chemecho` fails with "No matching distribution found"
-Update `pip` (`python -m pip install --upgrade pip`) and make sure your
-environment uses **Python 3.10**. If the problem persists,
-install directly from GitHub using the `pip install git+...` command in § 1.
+ChemEcho is not published on PyPI, so plain pip install chemecho will not work.
+Install directly from GitHub using the pip install git+... command
+in the Installation section above.
 
 ### `ValueError: PubChem could not find '<your input>'`
 PubChem did not recognize your input. Double-check the spelling of the
