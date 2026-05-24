@@ -1,17 +1,26 @@
 """
-musification Layer 2 — functional-group-aware sonification (approach C, hybrid).
+Functional-group-aware sonification of an IR spectrum.
 
-Built on top of Layer 1 (musification.py). The main melody track is the same as L1
-(pitch follows the transmittance contour). On top of it, for each functional
-group that is BOTH present in the SMILES AND confirmed by a real absorption
+The main melody traces the IR transmittance contour (deeper absorption →
+higher pitch). On top of that, for each functional group that is BOTH
+declared by the SMILES (via SMARTS match) AND confirmed by a real absorption
 peak in its canonical IR region, an accent track plays a signature instrument
-on a signature pitch at the matching peak position.
+on a signature pitch at the time slot of the matching peak.
+
+A carbon-count drum prelude is prepended for organic molecules, and the
+overall tempo is derived from the molecular weight (Maxwell-Boltzmann).
 
 Listener mapping:
-    contour (main track)  -> overall IR spectrum shape
+    melody contour        -> overall IR spectrum shape
     accent instrument     -> which functional group
     accent timing         -> where the corresponding IR peak sits
     accent loudness       -> peak depth / prominence
+    prelude drum hits     -> number of carbon atoms
+    tempo (BPM)           -> molecular weight (lighter = faster)
+
+Public entry point: :func:`molecular_music_fg`. Writes a MIDI file to the
+current working directory and returns its filename plus a structured
+``legend`` dict describing what was rendered.
 """
 
 import numpy as np
@@ -55,22 +64,31 @@ FG_CATALOG = {
     'N=O (nitro)':      {'smarts': '[N+](=O)[O-]',     'region': (1300, 1600), 'instrument': 57, 'pitch': ('F', 4)},
 }
 
-def noise_reduction (wavenumbers, transmittances) -> list :
-    
+def noise_reduction(wavenumbers, transmittances) -> list:
     """
-    Removes the tiny noise so the final music is a little more pleasing
-    
-    Args: 
-        wavenumbers (list): list of wavenumbers values
-        transmitances (list): list of transmittance values
-    Return:
-        (list): list of tuple corresponding to spectrum without noise
-    
+    Flatten the baseline of a transmittance spectrum so the main melody only
+    moves on real absorption features.
+
+    Any point whose transmittance is within 10 % of the spectrum's full range
+    of the maximum (i.e. above ``max - 0.1 * (max - min)``) is replaced by
+    ``max(transmittances)``, effectively clamping the baseline flat. Points
+    below that threshold are kept as-is.
+
+    The very first and very last samples are skipped. Callers that index this
+    output and the original arrays in parallel (e.g.
+    :func:`find_absorption_peaks`) must account for that 1-sample shift.
+
+    Args:
+        wavenumbers (list[float]): cm⁻¹ values, in any order.
+        transmittances (list[float]): % transmittance values aligned to
+            ``wavenumbers`` (0..100, lower = deeper absorption).
+
+    Returns:
+        list[tuple[float, float]]: one ``(wavenumber, transmittance)`` tuple
+        per retained sample, in input order, length ``len(wavenumbers) - 2``.
     """
-    
-    peaks =[]
-    
-    threshold = max(transmittances)-0.1*(max(transmittances)-min(transmittances))
+    peaks = []
+    threshold = max(transmittances) - 0.1 * (max(transmittances) - min(transmittances))
     for i in range(1, len(transmittances) - 1):
         if transmittances[i] < threshold:
             peaks.append((wavenumbers[i], transmittances[i]))
@@ -81,15 +99,15 @@ def noise_reduction (wavenumbers, transmittances) -> list :
 
 def detect_functional_groups(smiles: str) -> list:
     """
-    Detects functional groups in molecule.
-     
+    Detect which catalog functional groups are present in a molecule.
+
     Args:
-        smiles (str): SMILES of compound
-         
-    Return:
-        (list): the list of FG_CATALOG entries whose SMARTS pattern matches `smiles`.
-                Empty list if the SMILES cannot be parsed.
-    """
+        smiles (str): SMILES string of the compound.
+
+    Returns:
+        list[str]: names of :data:`FG_CATALOG` entries whose SMARTS pattern
+        matches ``smiles``. Empty list if ``smiles`` is empty or cannot be
+        parsed by RDKit.    """
     if not smiles:
         return []
     mol = Chem.MolFromSmiles(smiles)
@@ -105,17 +123,15 @@ def detect_functional_groups(smiles: str) -> list:
 
 def count_carbons(smiles: str) -> int:
     """
-    Counts nimber of Carbon atoms in molecule
+    Count the number of carbon atoms in a molecule.
 
     Args:
-        smiles (str): SMILES of compound
-    
-    Return:
-        (int): Total carbon atom count in the molecule. Returns 0 if SMILES is empty,
-                invalid, or the molecule contains no carbon (inorganic) — in which case
-                the carbon-count intro should be skipped.
-    
-    """
+        smiles (str): SMILES string of the compound.
+
+    Returns:
+        int: total carbon atom count. Returns 0 if ``smiles`` is empty,
+        unparseable, or the molecule contains no carbon (inorganic) — in
+        which case the carbon-count prelude should be skipped.    """
 
     if not smiles:
         return 0
@@ -172,15 +188,23 @@ def assign_peaks_to_fgs(detected_peaks: list, present_fgs: list) -> dict:
     """
     Disambiguate overlapping FG regions: every detected peak is assigned to
     the present FG whose region (a) contains the peak's wavenumber and
-    (b) is the NARROWEST among the candidates. A peak in no candidate region
-    is dropped (no accent fired).
+    (b) is the NARROWEST among the candidates (most-specific assignment).
+    A peak that falls in no candidate region is dropped (no accent fired).
+
+    Args:
+        detected_peaks (list[dict]): peaks as returned by
+            :func:`find_absorption_peaks`. Each must have a ``'wavenumber'``
+            key.
+        present_fgs (list[str]): names of FGs (from :data:`FG_CATALOG`)
+            confirmed to be in the molecule via SMARTS matching.
 
     Args:
         detected_peaks (list): detected peaks
         present_fgs (list): functional groups present in compound
 
     Returns:
-        dict[str, list[dict]]: fg_name -> peaks assigned to it.
+        dict[str, list[dict]]: mapping from FG name to the peaks assigned
+        to it. FGs with no assigned peaks are omitted from the result.
     """
     def sort_key(fg_name: str):
         lo, hi = FG_CATALOG[fg_name]['region']
@@ -203,19 +227,22 @@ def assign_peaks_to_fgs(detected_peaks: list, present_fgs: list) -> dict:
 
 def _scale_accent_volume(prominence: float, max_prominence: float,
                          lo: int = 60, hi: int = 127) -> int:
-    """Map peak prominence to MIDI velocity so deeper peaks sound louder.
-    
-    Args:
-    
-        prominence (float): intensity of peak
-        max_prominence (float): maximum intensity
-        lo (int): low volume in MIDI
-        hi (int): loud vloume in MIDI
-    
-    Return:
-    
-        (int): scale
     """
+    Map a peak's prominence to a MIDI velocity so deeper peaks sound louder.
+
+    Linearly interpolates ``prominence / max_prominence`` onto ``[lo, hi]``.
+    Returns ``hi`` if ``max_prominence <= 0`` (degenerate spectrum).
+
+    Args:
+        prominence (float): this peak's prominence, as returned by
+            :func:`scipy.signal.find_peaks`.
+        max_prominence (float): largest prominence in the same spectrum, used
+            as the upper anchor for the mapping.
+        lo (int): minimum MIDI velocity (0–127). Default 60.
+        hi (int): maximum MIDI velocity (0–127). Default 127.
+
+    Returns:
+        int: MIDI velocity in the range ``[lo, hi]``.    """
     if max_prominence <= 0:
         return hi
     return int(lo + (hi - lo) * (prominence / max_prominence))
@@ -227,22 +254,23 @@ def molecular_weight_to_bpm(compound, bpm_min: int = 60, bpm_max: int = 120) -> 
     Lighter molecules move faster → higher BPM; heavier → lower BPM.
 
     The 1/√M values are linearly interpolated between two reference masses
-    (M_fast=16 g/mol, M_slow=500 g/mol) and mapped onto [bpm_min, bpm_max].
-    Result is clamped so the music always stays within the specified bounds
-    regardless of how extreme the molecular weight is.
+    (``M_fast = 16 g/mol``, ``M_slow = 500 g/mol``) and mapped onto
+    ``[bpm_min, bpm_max]``. The result is clamped so the music always stays
+    within the specified bounds regardless of how extreme the molecular
+    weight is.
 
     Default range 60–120 BPM → music duration 15–30 s at 30 target beats.
 
     Args:
+        compound: NIST-style compound object. Must expose a ``mol_weight``
+            attribute (float, g/mol).
+        bpm_min (int): minimum tempo, applied to very heavy molecules.
+            Default 60.
+        bpm_max (int): maximum tempo, applied to very light molecules.
+            Default 120.
 
-        compound (NistCompoundObject)
-        bpm_min (int): tempo of music, default is 60 bpm
-        bpm_max (int): max tempo of music, default is 120 bpm
-
-    Return:
-
-        (int): tempo of music
-    """
+    Returns:
+        int: tempo in BPM, in the closed interval ``[bpm_min, bpm_max]``.    """
     import math
     M = compound.mol_weight
     M_fast, M_slow = 16.0, 500.0
@@ -256,17 +284,61 @@ def molecular_weight_to_bpm(compound, bpm_min: int = 60, bpm_max: int = 120) -> 
 
 def molecular_music_fg(extracted_data, compound, smiles: str):
     """
-    IR sonification with functional-group accents, carbon count,
-    tempo adapted to molecular weight, and volume varying with peak intensity.
+    Render a molecule's IR spectrum as a multi-track MIDI piece.
+
+    Layers produced (in playback order):
+        1. Carbon-count prelude — one Synth Drum hit per carbon atom
+           (skipped if the molecule contains no carbon).
+        2. Main melody — Fantasia pad whose pitch follows the IR
+           transmittance contour (high wavenumber → low).
+        3. Functional-group accents — one signature instrument per FG that
+           is both SMARTS-matched in ``smiles`` AND confirmed by a real
+           absorption peak in its canonical IR region (see :data:`FG_CATALOG`).
+        4. Wavenumber ruler — kick drum every 500 cm⁻¹, snare every 100 cm⁻¹.
+
+    Tempo (BPM) is derived from molecular weight via
+    :func:`molecular_weight_to_bpm`. Accent velocity is scaled by peak
+    prominence via :func:`_scale_accent_volume`.
+
+    Side effect:
+        Writes a MIDI file named ``"<compound.name>_audio_spectrum_fg.mid"``
+        to the current working directory.
 
     Args:
-
-        extracted_data (tuple(list, list)): data extracted from spectrum
-        compound (NistCompoundObject) : molecule
-        smiles (str): smiles of molecule
-
+        extracted_data (tuple[list[float], list[float]]):
+            ``(wavenumbers, transmittances)``. If wavenumbers are in
+            ascending order they are reversed internally so playback always
+            runs from high to low wavenumber (the conventional IR layout).
+        compound: NIST-style compound object. Must expose attributes
+            ``name`` (str, used for the output filename) and ``mol_weight``
+            (float, used to derive the BPM).
+        smiles (str): SMILES string of the molecule. Used only for
+            functional-group detection and carbon counting; an empty or
+            unparseable string degrades gracefully (no FG accents, no
+            prelude) but the melody still renders.
     Returns:
-        tuple[str, dict]: (midi filename, legend dict).
+        tuple[str, dict]: ``(filename, legend)`` where
+
+        * ``filename`` (str) — name of the MIDI file written to the cwd.
+        * ``legend`` (dict) — structured description of what was rendered::
+
+            {
+                'fgs': {
+                    <fg_name>: {
+                        'instrument_code': int,   # General MIDI program
+                        'region': (lo_cm1, hi_cm1),
+                        'pitch':  (note_name, octave),
+                        'n_peaks': int,           # accents fired for this FG
+                    },
+                    ...
+                },
+                'carbon_count': int,  # number of C atoms
+                'bpm': int,           # MW-derived tempo
+            }
+
+    Raises:
+        ValueError: if the spectrum has fewer than 3 points or if
+            ``wavenumbers`` and ``transmittances`` have mismatched lengths.
     """
     wavenumbers = extracted_data[0]
     transmittances = extracted_data[1]
@@ -413,23 +485,3 @@ def molecular_music_fg(extracted_data, compound, smiles: str):
         'bpm': bpm_mol,
     }
     return filename, legend
-
-
-# mini test
-    if __name__ == "__main__":
-        import nistchempy as nist
-        from get_spectrum import extract_spectrum_data
-
-        # caffeine: CAS 58-08-2, SMILES "CN1C=NC2=C1C(=O)N(C(=O)N2C)C"
-        cas = '58-08-2'
-        smiles = 'CN1C=NC2=C1C(=O)N(C(=O)N2C)C'
-        compound = nist.get_compound(cas)
-        fname, legend = molecular_music_fg(extract_spectrum_data(compound), compound, smiles)
-        print(f"File created: {fname}")
-        print(f"Prelude: {legend['carbon_count']} Synth Drum hits (carbon count)")
-        print(f"BPM: {legend['bpm']}  (MW-derived, Maxwell-Boltzmann)")
-        print("Functional-group legend:")
-        for fg, info in legend['fgs'].items():
-            print(f"  {fg}: instrument={info['instrument_code']}, "
-                f"region={info['region']} cm-1, pitch={info['pitch']}, "
-                f"n_peaks={info['n_peaks']}")
