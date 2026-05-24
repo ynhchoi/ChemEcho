@@ -77,7 +77,6 @@ ChemEcho ships its own Streamlit app.
 Run from the project root:
 
 ```
-
 (chemecho) $ streamlit run src/chemecho/streamlit_app.py
 ```
 
