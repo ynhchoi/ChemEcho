@@ -41,8 +41,8 @@ classifiers = [
 dynamic = ["version"]
 
 [project.urls]
-source = "https://github.com/ynhchoi/chemecho_epfl"
-tracker = "https://github.com/ynhchoi/chemecho_epfl/issues"
+source = "https://github.com/ynhchoi/ChemEcho"
+tracker = "https://github.com/ynhchoi/ChemEcho/issues"
 
 [project.optional-dependencies]
 test = [
