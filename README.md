@@ -69,6 +69,41 @@ rendering. Follow the instructions in the "Preparation before importing"
 paragraph here:
 <https://musicpy.readthedocs.io/en/latest/Musicpy%20daw%20module/>
 
+`musicpy.daw` relies on **FluidSynth**. Install it for your OS, then make
+sure Python can find the shared library:
+
+**macOS (Homebrew):**
+
+```
+brew install fluid-synth
+export DYLD_LIBRARY_PATH=/opt/homebrew/lib
+```
+
+(Add the `export` line to `~/.zshrc` or `~/.bash_profile` to make it permanent.)
+
+**Linux (Ubuntu/Debian):**
+
+```
+sudo apt-get update
+sudo apt-get install -y fluidsynth libfluidsynth-dev
+```
+
+If `musicpy.daw` still cannot find the library, point the loader at it:
+
+```
+export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
+```
+
+(Add it to `~/.bashrc` to make it permanent.)
+
+**Windows:**
+
+Download a FluidSynth release from
+<https://github.com/FluidSynth/fluidsynth/releases>, unzip it, and add the
+folder containing `libfluidsynth-*.dll` to your `PATH`:
+
+- *PowerShell (current session):* `$env:PATH = "C:\path\to\fluidsynth\bin;" + $env:PATH`
+- *Permanent:* System Properties → Environment Variables → edit `Path`.
 
 ### Launch Streamlit app
 
@@ -141,6 +176,11 @@ above).
 ChemEcho is not published on PyPI, so plain `pip install chemecho` will not work.
 Install directly from GitHub using the `pip install git+...` command
 in the Installation section above.
+
+### `ImportError: ... libfluidsynth ...` when running the app
+FluidSynth is not on Python's library search path. Re-read the
+**Audio rendering — `musicpy.daw`** section above and apply the
+platform-specific fix for your OS.
 
 ### `ValueError: PubChem could not find '<your input>'`
 PubChem did not recognize your input. Double-check the spelling of the

@@ -21,6 +21,8 @@ dependencies = [
     "scipy",
     "py3Dmol",
     "Pillow",
+    "pydub",
+    "sf2_loader",
 ]
 authors = [
     {name = "Eulalie Schwendenmann", email = "eulalie.schwendenmann@epfl.ch"},
